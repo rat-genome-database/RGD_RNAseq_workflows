@@ -79,6 +79,11 @@ echo "Generating JSON for $genebed_file."
   "type": "FeatureTrack",
   "trackId": "RNAseq_${unique_name}",
   "name": "RNAseq_${unique_name}",
+  "category": [
+        "RNA-Seq",
+        "${Tissue}",
+        "${Strain}"
+      ],
   "assemblyNames": [
     "mRatBN7.2"
   ],
@@ -106,12 +111,12 @@ echo "Generating JSON for $genebed_file."
     "type": "BedTabixAdapter",
     "bedGzLocation": {
       "locationType": "UriLocation",
-      "uri":  "/jbrowse2/RNAseq_${unique_name}_geneTPMfinalOP.bed.gz"
+      "uri":  "json/RNAseq_${unique_name}_geneTPMfinalOP.bed.gz"
     },
     "index": {
       "location": {
         "locationType": "UriLocation",
-        "uri": "/jbrowse2/RNAseq_${unique_name}_geneTPMfinalOP.bed.gz.tbi"
+        "uri": "json/RNAseq_${unique_name}_geneTPMfinalOP.bed.gz.tbi"
       }
     }
   },
