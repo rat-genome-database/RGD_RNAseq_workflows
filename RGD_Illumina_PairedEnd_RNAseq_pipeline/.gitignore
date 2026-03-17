@@ -1,0 +1,76 @@
+# Large sequencing data — never commit
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.bam.bai
+*.bigwig
+*.bw
+*.sra
+*.sralite
+
+# FastQ-Screen genome indices (large binary files)
+dependencies/FastQ_Screen_Genomes/
+
+# RSEM and STAR reference index files
+rsemref/
+RefIndex/
+*.transcripts.fa
+*.idx.fa
+*.n2g.idx.fa
+*.grp
+*.ti
+*.seq
+SA
+SAindex
+Genome
+chrName.txt
+chrNameLength.txt
+chrLength.txt
+chrStart.txt
+genomeParameters.txt
+sjdbInfo.txt
+sjdbList.*.tab
+transcriptInfo.tab
+exonInfo.tab
+geneInfo.tab
+
+# Pipeline output files
+*.genes.TPM.matrix
+*.genes.counts.matrix
+*.transcripts.TPM.matrix
+*.transcripts.counts.matrix
+*.genes.results
+*.isoforms.results
+*.transcripts.results
+*_jbrowse_session_GRCr8.json
+*.json
+*_sex_result.txt
+*_sex_conflict_report.txt
+*multiQC_report.html
+*multiQC_report_data/
+
+# Logs and SLURM output
+log_files/
+*.out
+*.err
+
+# Status markers
+.status/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Scratch directories
+scratch/

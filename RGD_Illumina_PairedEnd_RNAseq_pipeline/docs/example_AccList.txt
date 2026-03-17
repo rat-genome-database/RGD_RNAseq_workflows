@@ -1,0 +1,3 @@
+Run	geo_accession	Tissue	Strain	Sex	PMID	GEOpath	Title	Sample_characteristics	StrainInfo
+SRR12345678	GSM1234567	Liver	BN/NHsdMcwi	M	12345678	https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE123456	Example study title	age: 12 weeks; treatment: control	https://rgd.mcw.edu/rgdweb/report/strain/main.html?id=12345
+SRR12345679	GSM1234568	Liver	BN/NHsdMcwi	F	12345678	https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE123456	Example study title	age: 12 weeks; treatment: control	https://rgd.mcw.edu/rgdweb/report/strain/main.html?id=12345

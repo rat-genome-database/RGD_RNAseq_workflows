@@ -1,0 +1,23 @@
+The files in this directory have mixed licensing:
+
+-------------------------------------------------------------------------------
+rsem-generate-data-matrix
+rsem-generate-data-matrix-counts
+-------------------------------------------------------------------------------
+These scripts are derived from RSEM (RNA-Seq by Expectation-Maximization)
+by Bo Li and Colin Dewey, and are licensed under the GNU General Public
+License v3.0 (GPL-3.0).
+
+Modifications were made by Wendy Demos (RGD, Medical College of Wisconsin)
+in August 2024 to use File::Basename for cleaner output column headers and
+to output TPM values (rsem-generate-data-matrix) and expected counts
+(rsem-generate-data-matrix-counts) respectively.
+
+Original RSEM source: https://github.com/deweylab/RSEM
+GPL-3.0 license text: https://www.gnu.org/licenses/gpl-3.0.txt
+
+-------------------------------------------------------------------------------
+fastq_screen.conf
+-------------------------------------------------------------------------------
+This file is a configuration template created for this pipeline and is
+licensed under the MIT License (see the repository root LICENSE file).

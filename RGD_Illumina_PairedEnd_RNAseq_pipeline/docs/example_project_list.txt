@@ -1,0 +1,7 @@
+# Project list for bulk_orchestrator_production_diskGuard.bash
+# Format: <path_to_acclist>  <BioProjectID>  <read_length>
+# Lines starting with # are ignored
+# Read length (bp) is used for STAR sjdbOverhang = length - 1
+#
+/path/to/accession_lists/PRJNA123456_AccList.txt	PRJNA123456	150
+/path/to/accession_lists/PRJNA789012_AccList.txt	PRJNA789012	100
