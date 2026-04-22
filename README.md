@@ -6,7 +6,7 @@ All workflows align reads to rat reference genomes, quantify expression with RSE
 
 ---
 
-## Current Workflow
+## Current Workflows
 
 ### [RGD_Illumina_PairedEnd_RNAseq_pipeline](./RGD_Illumina_PairedEnd_RNAseq_pipeline/)
 
@@ -28,6 +28,25 @@ See the [pipeline README](./RGD_Illumina_PairedEnd_RNAseq_pipeline/README.md) fo
 
 ---
 
+### [RGD_Illumina_SingleEnd_RNAseq_pipeline](./RGD_Illumina_SingleEnd_RNAseq_pipeline/)
+
+The current production pipeline for **single-end Illumina** RNA-seq data.
+
+**Reference genome:** GCF_036323735.1 GRCr8  
+**Key tools:** STAR 2.7.10b · RSEM 1.3.3 · samtools 1.20 · deeptools 3.5.1 · FastQC · FastQ-Screen · MultiQC
+
+**What it does:**
+- Downloads SRA data and runs FastQC / FastQ-Screen QC on raw reads
+- Aligns to GRCr8 with STAR; generates BPM-normalized BigWig coverage tracks
+- Filters samples by alignment rate; estimates biological sex from chrX/Y read depth
+- Quantifies expression with RSEM; produces TPM and count matrices
+- Generates JBrowse2 track configs and session JSON for visualization
+- Supports batch processing of multiple projects via an orchestrator with disk space guards
+
+See the [pipeline README](./RGD_Illumina_SingleEnd_RNAseq_pipeline/README.md) for full documentation, configuration instructions, and usage.
+
+---
+
 ## Archive
 
 Older workflow versions are preserved in the [`archive/`](./archive/) directory for reference. These were developed for earlier reference genomes and pipeline architectures and are no longer actively maintained.
@@ -44,12 +63,6 @@ Older workflow versions are preserved in the [`archive/`](./archive/) directory 
 | `illuminaSingle_1readPerSample_updateAug2025` | Single-end, August 2025 update |
 | `illuminaSingle_1readPerSample_v3` | Single-end (v3) |
 | `illuminaSingle_multRunsPerSample` | Single-end, multiple runs per sample |
-
----
-
-## Planned Workflows
-
-- **RGD_Illumina_SingleEnd_RNAseq_pipeline** — in development
 
 ---
 
