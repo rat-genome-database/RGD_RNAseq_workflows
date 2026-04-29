@@ -1,32 +1,64 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #SBATCH --job-name=SRA2QC
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=12
 #SBATCH --mem-per-cpu=1gb
 #SBATCH --time=06:00:00
-#SBATCH --account=your-slurm-account
+#SBATCH --account=YOUR_SLURM_ACCOUNT       # <-- replace with your SLURM account
 #SBATCH --partition=normal
 #SBATCH --output=%x-%j.out
 #SBATCH --mail-type=FAIL
-#SBATCH --mail-user=your@email.edu
+#SBATCH --mail-user=YOUR_EMAIL@example.com  # <-- replace with your email
 #SBATCH --error=SRA2QC.err
 
-###############################################################################
-# USER CONFIGURATION
-# Update the variables below for your system before running.
-###############################################################################
-# Directory containing all pipeline scripts — screenconfig is set from this
-SCRIPT_DIR="/path/to/your/pipeline/scripts"
-# Scratch filesystem root; scratch_dir is built as SCRATCH_BASE/BIOProjectID
-SCRATCH_BASE="/path/to/your/scratch/mount"
-###############################################################################
-
-
-# Script details
-## Downloads SRA files, converts to FASTQ, runs QC
-## Outputs to scratch directory: /path/to/your/scratch/$BIOProjectID/$Run/
+#####################################################################################################################
+# SRA2QC_production.sh
+#
+# Downloads SRA files, converts to FASTQ, and runs QC for paired-end Illumina data.
+# Outputs to scratch directory: <SCRATCH_BASE>/<BIOProjectID>/<Run>/
+#
+# This script is intended to be submitted by a parent orchestration script that
+# exports the following environment variables before calling sbatch:
+#   Run             SRA run accession (e.g. SRR1234567)
+#   geo_accession   GEO sample accession (e.g. GSM1234567)
+#   PRJdir          Full path to the project reads_fastq directory
+#   BIOProjectID    GEO/BioProject accession (e.g. GSE70012)
+#
+# Steps performed:
+#   1. Prefetch SRA file (up to PREFETCH_MAX_ATTEMPTS retries with exponential backoff)
+#   2. Validate SRA file with vdb-validate
+#   3. Convert to FASTQ with fasterq-dump (up to FASTERQ_MAX_ATTEMPTS retries)
+#      - Paired-end: renames and continues
+#      - Single-end: exits with code 2 (caller routes to SE pipeline)
+#   4. Run FastQC (-t 2, with increased Java heap to prevent OOM failures)
+#   5. Run FastQ-Screen
+#   6. Compress FASTQ files with pigz
+#   7. Remove the SRA file from scratch
+#
+# Exit codes:
+#   0  Success
+#   1  Fatal error (prefetch, validation, fasterq-dump, FastQC, FastQ-Screen, or compression failed)
+#   2  Single-end layout detected — not an error; route to SE pipeline
+#
+# Dependencies:
+#   sratoolkit, fastq-screen, fastqc, bowtie2, pigz, python
+#   FastQ-Screen config file (set SCREEN_CONFIG below)
+#####################################################################################################################
 
 set -x
+
+# ---------------------------------------------------------------------------
+# CONFIGURATION — edit these variables before running
+# ---------------------------------------------------------------------------
+# Directory containing pipeline helper scripts
+SCRIPT_DIR="/path/to/your/pipeline/scripts"        # <-- replace
+
+# FastQ-Screen configuration file
+SCREEN_CONFIG="/path/to/FastQ_Screen_Genomes/fastq_screen.conf"  # <-- replace
+
+# Scratch filesystem base - per-run output goes to: <SCRATCH_BASE>/<BIOProjectID>/<Run>/
+SCRATCH_BASE="/scratch/your/scratch/area"           # <-- replace
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Retry configuration — tune these without touching the logic below
@@ -37,14 +69,13 @@ PREFETCH_MAX_SIZE="100G"      # covers large SRA files
 FASTERQ_MAX_ATTEMPTS=3        # how many times to retry fasterq-dump
 FASTERQ_RETRY_WAIT=10         # seconds to wait between fasterq-dump retries
 
-# Load required modules
+# Load required modules - adjust module names/versions for your environment
 module load sratoolkit/3.1.1 fastq-screen/0.15.2 fastqc/0.11.9 bowtie/2.5 python/3.9.1
 
-# Retrieve environment variables
+# Retrieve environment variables exported by the parent script
 Run=${Run}
 geo_accession=${geo_accession}
 PRJdir=${PRJdir}
-screenconfig="$SCRIPT_DIR/dependencies/FastQ_Screen_Genomes/fastq_screen.conf"
 BIOProjectID=${BIOProjectID}
 
 echo "============================================"
@@ -53,9 +84,10 @@ echo "============================================"
 echo "Run:           $Run"
 echo "geo_accession: $geo_accession"
 echo "PRJdir:        $PRJdir"
-echo "screenconfig:  $screenconfig"
+echo "screenconfig:  $SCREEN_CONFIG"
 echo "BIOProjectID:  $BIOProjectID"
 
+scratch_dir="${SCRATCH_BASE}/${BIOProjectID}"
 
 mkdir -p "$scratch_dir/$Run"
 echo "Scratch directory: $scratch_dir/$Run"
@@ -68,7 +100,6 @@ clean_prefetch_output() {
     local sra_dir="$scratch_dir/$Run"
     local sra_file="$sra_dir/${Run}.sra"
     local sra_file_lite="$sra_dir/${Run}.sra.lite"
-    # Remove partial downloads
     rm -f "$sra_file" "$sra_file_lite"
     # sratoolkit sometimes leaves a lock or partial sub-directory
     rm -rf "$scratch_dir/${Run}.tmp" "$scratch_dir/${Run}.lock"
@@ -78,8 +109,8 @@ echo "============================================"
 echo "Step 1: Prefetching SRA file (up to ${PREFETCH_MAX_ATTEMPTS} attempts)..."
 echo "============================================"
 
-# Set the SRA cache root to scratch so prefetch writes directly there.
-# This also prevents it from defaulting to home directory and filling quota.
+# Set the SRA cache root to scratch so prefetch writes directly there,
+# preventing it from defaulting to home directory and filling quota.
 vdb-config -s "/repository/user/main/public/root=$scratch_dir" 2>/dev/null || true
 
 prefetch_attempt=1
@@ -100,7 +131,7 @@ while [ $prefetch_attempt -le $PREFETCH_MAX_ATTEMPTS ]; do
             --output-directory "$scratch_dir" \
             "$Run"; then
 
-        # Confirm the file actually landed — prefetch can exit 0 spuriously
+        # Confirm the file actually landed - prefetch can exit 0 spuriously
         sra_path=$(find "$scratch_dir/$Run" \
             \( -name "${Run}.sra" -o -name "${Run}.sralite" \) \
             2>/dev/null | head -1)
@@ -131,7 +162,6 @@ done
 if [ "$prefetch_success" = false ]; then
     echo "============================================"
     echo "FATAL ERROR: prefetch failed for $Run after $PREFETCH_MAX_ATTEMPTS attempts"
-    echo "  Transports tried: ${TRANSPORT_CYCLE[*]:0:$PREFETCH_MAX_ATTEMPTS}"
     echo "============================================"
     exit 1
 fi
@@ -140,11 +170,10 @@ echo ""
 echo "============================================"
 echo "Step 2: Validating SRA file..."
 echo "============================================"
-# Point vdb-validate at the actual file, not just the directory
 sra_file_path=$(find "$scratch_dir/$Run" -name "${Run}.sra" -o -name "${Run}.sralite" 2>/dev/null | head -1)
 vdb-validate "$sra_file_path" || {
-    echo "ERROR: Validation failed for $Run";
-    exit 1;
+    echo "ERROR: Validation failed for $Run"
+    exit 1
 }
 echo "Validation completed successfully"
 echo ""
@@ -204,9 +233,9 @@ while [ $fasterq_attempt -le $FASTERQ_MAX_ATTEMPTS ]; do
             echo "============================================"
             echo "SINGLE-END LAYOUT DETECTED — NOT PROCESSED"
             echo "============================================"
-            echo "Run:          $Run"
+            echo "Run:           $Run"
             echo "geo_accession: $geo_accession"
-            echo "BIOProjectID: $BIOProjectID"
+            echo "BIOProjectID:  $BIOProjectID"
             echo ""
             echo "fasterq-dump produced a single-end FASTQ:"
             echo "  $fastq_se"
@@ -245,8 +274,12 @@ echo ""
 echo "============================================"
 echo "Step 4: Running FastQC..."
 echo "============================================"
-fastqc "$new_fastq1" "$new_fastq2" --outdir "$scratch_dir/${Run}/" || {
-    echo "ERROR: FastQC failed"; exit 1;
+# -t 2: run two files in parallel threads
+# _JAVA_OPTIONS -Xmx8g: prevents OOM failures on large FASTQ files
+export _JAVA_OPTIONS="-Xmx8g"
+fastqc -t 2 "$new_fastq1" "$new_fastq2" --outdir "$scratch_dir/${Run}/" || {
+    echo "ERROR: FastQC failed"
+    exit 1
 }
 echo "FastQC completed successfully"
 echo ""
@@ -254,8 +287,9 @@ echo ""
 echo "============================================"
 echo "Step 5: Running FastQ-Screen..."
 echo "============================================"
-fastq_screen --outdir "$scratch_dir/${Run}/" --conf "$screenconfig" "$new_fastq1" "$new_fastq2" || {
-    echo "ERROR: FastQ-Screen failed"; exit 1;
+fastq_screen --outdir "$scratch_dir/${Run}/" --conf "$SCREEN_CONFIG" "$new_fastq1" "$new_fastq2" || {
+    echo "ERROR: FastQ-Screen failed"
+    exit 1
 }
 echo "FastQ-Screen completed successfully"
 echo ""
@@ -265,7 +299,8 @@ echo "Step 6: Compressing FASTQ files..."
 echo "============================================"
 pigz "$new_fastq1" "$new_fastq2"
 [ -f "${new_fastq1}.gz" ] && [ -f "${new_fastq2}.gz" ] || {
-    echo "ERROR: FASTQ compression failed"; exit 1;
+    echo "ERROR: FASTQ compression failed"
+    exit 1
 }
 echo "  Created: $(basename "${new_fastq1}.gz")"
 echo "  Created: $(basename "${new_fastq2}.gz")"
