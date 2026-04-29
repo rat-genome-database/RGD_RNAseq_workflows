@@ -4,51 +4,64 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=4gb
 #SBATCH --time=10:00:00
-#SBATCH --account=your-slurm-account
+#SBATCH --account=YOUR_SLURM_ACCOUNT       # <-- replace with your SLURM account
 #SBATCH --partition=normal
 #SBATCH --mail-type=FAIL
-#SBATCH --mail-user=your@email.edu
-
-###############################################################################
-# USER CONFIGURATION
-# Update the variables below for your system before running.
-###############################################################################
-# Scratch filesystem root; scratch_dir is built as SCRATCH_BASE/BIOProjectID
-SCRATCH_BASE="/path/to/your/scratch/mount"
-# GRCr8 GTF annotation file
-REF_GTF="/path/to/your/GRCr8/reference/updated_GCF_036323735.1_CM070413.1_GRCr8_genomic.gtf"
-# GRCr8 genome FASTA file
-GENOME_FASTA="/path/to/your/GRCr8/reference/updated_GCF_036323735.1_CM070413.1_GRCr8_genomic.fna"
-###############################################################################
-
+#SBATCH --mail-user=YOUR_EMAIL@example.com  # <-- replace with your email
 # NOTE: Output and error logs are unified via submission script using --output and --error
 
 # ---------------------------------------------
 # Script: RSEM_noBW.bash
-# Last modified: 17 Feb 2026 by WMD
-# Purpose: Estimate expression using RSEM after STAR alignment
-# BigWig generation has been moved to STAR_bigwig.sh
+# Purpose: Estimate expression using RSEM after STAR alignment.
+#          BigWig generation is handled separately by STAR_bigwig2.sh.
+#
+# Change log:
+#   17 Feb 2026 WMD — BigWig generation moved to STAR_bigwig2.sh
+#   [current]   WMD — Removed --sort-bam-by-coordinate; the coordinate-sorted
+#                     BAM produced by that flag is not used by any downstream
+#                     step. Sorting is already performed on the STAR genome BAM
+#                     in STAR_bigwig2.sh. Removing this flag eliminates a
+#                     samtools sort pass that was unnecessary and slow for
+#                     high-read-count samples.
 # ---------------------------------------------
 
-# Load required software modules
+# ---------------------------------------------------------------------------
+# CONFIGURATION — edit these variables before running
+# ---------------------------------------------------------------------------
+# Root directory under which all BioProject data directories live
+DATA_BASE="/path/to/your/expression/data"   # <-- replace
+
+# Scratch filesystem base — per-project temp files go here
+SCRATCH_BASE="/scratch/your/scratch/area"   # <-- replace
+
+# Reference genome directory and files
+REFdir="/path/to/your/reference/genome"     # <-- replace
+REF_GTF="${REFdir}/your_genome.gtf"         # <-- replace
+GENOME_FASTA="${REFdir}/your_genome.fna"    # <-- replace
+# ---------------------------------------------------------------------------
+
+# Load required software modules — adjust versions for your environment
 module load rsem/1.3.3 samtools/1.20
 
-# Retrieve environment variables
+# Retrieve environment variables exported by the parent script
 Run=${Run}
 geo_accession=${geo_accession}
 PRJdir=${PRJdir}
 BIOProjectID=${BIOProjectID}
 Logdir=${Logdir}
+unique_name="${unique_name}"
+
 echo "PRJdir is set to $PRJdir"
+
+scratch_dir="${SCRATCH_BASE}/${BIOProjectID}"
 echo "Scratch working directory is set to $scratch_dir"
+
 tempOPdir="${scratch_dir}/${geo_accession}"
 echo "tempOPdir is set to $tempOPdir"
-unique_name="${unique_name}"
-echo "unique_name is set to ${unique_name}"
 
-# Reference Files (GRCr8)
 rsemref="${scratch_dir}/rsemref"
 
+echo "unique_name is set to ${unique_name}"
 echo "GTF reference file: $REF_GTF"
 echo "Genome FASTA file: $GENOME_FASTA"
 
@@ -86,11 +99,13 @@ echo "File size: $(du -h "$inbam" | cut -f1)"
 echo ""
 
 # Run RSEM
+# Note: --sort-bam-by-coordinate is intentionally omitted. The coordinate-sorted
+# genome BAM used for BigWig generation is produced by STAR_bigwig2.sh. RSEM's
+# own sort output is not consumed by any downstream step in this pipeline.
 echo "Estimating expression for sample: $geo_accession JOB START $(date "+%Y-%m-%d %H:%M:%S")"
 echo "Running RSEM on $inbam with reference $rsemref"
 
 rsem-calculate-expression \
-    --sort-bam-by-coordinate \
     --paired-end \
     --alignments -p 8 "$inbam" "$rsemref" "$tempOPdir/$geo_accession"
 
