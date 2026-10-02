@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=RSEMmtx
 #SBATCH --ntasks=1
-#SBATCH --mem=4gb
+#SBATCH --mem=16gb
 #SBATCH --time=01:05:00
 #SBATCH --account=your-slurm-account
 #SBATCH --partition=normal
@@ -39,7 +39,7 @@ Logdir=${Logdir}
 echo "Logdir is set to $Logdir"
 baseDir=${baseDir}
 echo "baseDir is set to ${baseDir}"
-Dependency_dir="${SCRIPT_DIR}/dependencies"
+Dependency_dir="${SCRIPT_DIR}/../dependencies"
 mkdir -p "$scratch_dir"
 
 # Ensure project directory exists
@@ -130,7 +130,7 @@ python3 -m multiqc "$scratch_dir" -o "${baseDir}" -n ${BIOProjectID}_final_multi
 ##################################
 # Run Sample Sex Conflict Script #
 ##################################
-sh "${SCRIPT_DIR}/ConflictedSampleReport_v4.sh" ${BIOProjectID}
+sh "${SCRIPT_DIR}/ConflictedSampleReport_v8.sh" ${BIOProjectID}
 
 ###########################################
 # Capture end time and print elapsed time #

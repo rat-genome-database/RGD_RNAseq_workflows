@@ -19,7 +19,7 @@
 SCRIPT_DIR="/path/to/your/pipeline/scripts"
 # Your home/base directory
 myDir="/path/to/your/home"
-# Scratch filesystem mount point (for disk checks)
+# Scratch area that holds the per-project scratch folders (scratch_dir = SCRATCH_BASE/BIOProjectID)
 SCRATCH_BASE="/path/to/your/scratch/mount"
 ###############################################################################
 
@@ -34,6 +34,8 @@ fi
 
 AccList=$1
 BIOProjectID=$2
+scratchDir="${SCRATCH_BASE}/${BIOProjectID}"   # per-project scratch folder
+SCRATCH_MOUNT="${SCRATCH_BASE}"                # disk-usage checks (any path on the scratch filesystem)
 baseDir="$myDir/data/expression/GEO/${BIOProjectID}"
 PRJdir="$baseDir/reads_fastq"
 Logdir="$baseDir/log_files"

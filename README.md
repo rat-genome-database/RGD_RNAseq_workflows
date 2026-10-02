@@ -13,15 +13,16 @@ All workflows align reads to rat reference genomes, quantify expression with RSE
 The current production pipeline for **paired-end Illumina** RNA-seq data.
 
 **Reference genome:** GCF_036323735.1 GRCr8  
-**Key tools:** STAR 2.7.10b · RSEM 1.3.3 · samtools 1.20 · deeptools 3.5.1 · FastQC · FastQ-Screen · MultiQC
+**Key tools:** STAR 2.7.10b · RSEM 1.3.3 · samtools 1.20 · deeptools 3.5.1 · Picard 2.25.0 · FastQC · FastQ-Screen · MultiQC
 
 **What it does:**
 - Downloads SRA data with robust retry logic (up to 8 prefetch attempts)
 - Runs FastQC and FastQ-Screen QC on raw reads
 - Aligns to GRCr8 with STAR; generates BPM-normalized BigWig coverage tracks
-- Filters samples by alignment rate; estimates biological sex from chrX/Y read depth
+- Infers library strandedness and library preparation (poly(A) selection vs rRNA depletion) from the data, with a recorded reason for every call
+- Filters samples by alignment rate; calls biological sex from sex-linked gene expression (with chrX/Y read depth as the initial estimate)
 - Quantifies expression with RSEM; produces TPM and count matrices
-- Generates JBrowse2 track configs and session JSON for visualization
+- Generates JBrowse2 track configs and session JSON for visualization (samples that pass alignment QC)
 - Supports batch processing of multiple projects via an orchestrator with disk space guards
 
 See the [pipeline README](./RGD_Illumina_PairedEnd_RNAseq_pipeline/README.md) for full documentation, configuration instructions, and usage.

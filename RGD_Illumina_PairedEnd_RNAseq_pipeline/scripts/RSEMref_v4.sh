@@ -25,13 +25,15 @@ module load rsem/1.3.3 samtools/1.20
 
 # Variables
 BIOProjectID=${BIOProjectID}
+scratch_dir="${SCRATCH_BASE}/${BIOProjectID}"   # per-project scratch folder
 # Reference Files (GRCr8)
 rsemref="${scratch_dir}/rsemref"
 
 echo "RSEM reference will be generated at: $rsemref"
 
 # Check if RSEM reference already exists
-if [ -f "$rsemref/rsemref.transcripts.fa" ]; then
+# rsem-prepare-reference writes <prefix>.transcripts.fa, <prefix>.grp, ... next to the prefix
+if [ -f "${rsemref}.transcripts.fa" ]; then
     echo "RSEM reference already exists. Skipping generation."
     exit 0
 fi

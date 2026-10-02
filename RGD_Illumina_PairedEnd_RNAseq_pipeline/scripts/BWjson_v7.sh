@@ -166,6 +166,8 @@ EOF
 ###############################################################################
 # JSON VALIDATION (FAIL FAST)
 ###############################################################################
+# Make python3 available on compute nodes; adjust the module name for your cluster
+module load python/3.9.1 2>/dev/null || module load python3 2>/dev/null || true
 python3 - <<EOF
 import json
 with open("$json_file") as f:

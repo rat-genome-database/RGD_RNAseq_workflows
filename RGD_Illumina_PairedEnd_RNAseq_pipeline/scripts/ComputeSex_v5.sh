@@ -34,6 +34,7 @@ module load samtools/1.20
 Run=${Run}
 geo_accession=${geo_accession}
 BIOProjectID=${BIOProjectID}
+scratch_dir="${SCRATCH_BASE}/${BIOProjectID}"   # per-project scratch folder
 PRJdir=${PRJdir}
 baseDir=${baseDir}
 Logdir=${Logdir}

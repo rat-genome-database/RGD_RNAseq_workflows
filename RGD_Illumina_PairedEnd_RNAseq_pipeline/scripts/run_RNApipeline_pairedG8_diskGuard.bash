@@ -3,7 +3,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=4gb
-#SBATCH --time=06:30:00
+#SBATCH --time=72:00:00
 #SBATCH --account=your-slurm-account
 #SBATCH --output=%x-%j.out
 #SBATCH --mail-type=FAIL
@@ -18,7 +18,7 @@
 SCRIPT_DIR="/path/to/your/pipeline/scripts"
 # Your home/base directory
 myDir="/path/to/your/home"
-# Scratch filesystem mount point (for disk checks)
+# Scratch area that holds the per-project scratch folders (scratch_dir = SCRATCH_BASE/BIOProjectID)
 SCRATCH_BASE="/path/to/your/scratch/mount"
 # GRCr8 GTF annotation file
 REF_GTF="/path/to/your/GRCr8/reference/updated_GCF_036323735.1_CM070413.1_GRCr8_genomic.gtf"
@@ -52,6 +52,7 @@ fi
 
 AccList=$1
 BIOProjectID=$2
+scratch_dir="${SCRATCH_BASE}/${BIOProjectID}"   # per-project scratch folder
 length=$3
 
 # Validate inputs
@@ -264,9 +265,9 @@ mapfile -t geo_accessions < "$temp_file"
 
 echo "Found ${#geo_accessions[@]} unique samples (GSM accessions)"
 
-# Verify STAR_bigwig2.sh exists and is executable
-if [ ! -x STAR_bigwig2.sh ]; then
-    echo "ERROR: STAR_bigwig2.sh not found or not executable. Please check the script path and permissions."
+# Verify STAR_bigwig3.sh exists and is executable
+if [ ! -x STAR_bigwig3.sh ]; then
+    echo "ERROR: STAR_bigwig3.sh not found or not executable. Please check the script path and permissions."
     exit 1
 fi
 
@@ -307,13 +308,13 @@ for geo_accession in "${geo_accessions[@]}"; do
                 --output="$sample_log_dir/STAR-%j.out" \
                 --error="$sample_log_dir/STAR-%j.err" \
                 --dependency=afterok:${starRef_job_id} \
-                STAR_bigwig2.sh "$geo_accession" "$READ1_FILES" "$READ2_FILES" "$BIOProjectID" "$unique_name")
+                STAR_bigwig3.sh "$geo_accession" "$READ1_FILES" "$READ2_FILES" "$BIOProjectID" "$unique_name")
         else
             sbatch_output=$(sbatch --job-name="STAR_$geo_accession" \
                 --export=baseDir="$baseDir",PRJdir="$PRJdir",Logdir="$Logdir" \
                 --output="$sample_log_dir/STAR-%j.out" \
                 --error="$sample_log_dir/STAR-%j.err" \
-                STAR_bigwig2.sh "$geo_accession" "$READ1_FILES" "$READ2_FILES" "$BIOProjectID" "$unique_name")
+                STAR_bigwig3.sh "$geo_accession" "$READ1_FILES" "$READ2_FILES" "$BIOProjectID" "$unique_name")
         fi
 
         echo "  sbatch output: $sbatch_output"
@@ -513,9 +514,8 @@ RSEM_log_dir="$Logdir/RSEM"
 mkdir -p "$RSEM_log_dir"
 
 # Define RSEM reference directory path
-RSEM_REF_DIR="$scratch_dir/RSEMRef"
 
-if [ ! -d "$RSEM_REF_DIR" ] || [ ! -f "$RSEM_REF_DIR/reference.transcripts.fa" ]; then
+ if [ ! -f "$scratch_dir/rsemref.transcripts.fa" ]; then
     echo "Submitting rsemRef_v4.sh to generate RSEM reference."
     rsemRef_output=$(sbatch \
         --job-name="RSEMRef_${BIOProjectID}" \
@@ -541,7 +541,7 @@ if [ ! -d "$RSEM_REF_DIR" ] || [ ! -f "$RSEM_REF_DIR/reference.transcripts.fa" ]
         exit 1
     fi
 else
-    echo "RSEM reference already exists at $RSEM_REF_DIR. Skipping rsemRef_v4.sh."
+    echo "RSEM reference already exists at $scratch_dir/rsemref. Skipping RSEMref_v4.sh."
     rsemRef_job_id=""
 fi
 
@@ -755,7 +755,7 @@ if ((${#dep_ids[@]} > 0)); then
     session_log_dir="$Logdir/JBrowseSession"
     mkdir -p "$session_log_dir"
 
-    echo "Submitting JBrowseSession_v1.sh with dependency afterok:$dep_string" >> "$log_file"
+    echo "Submitting JBrowseSession_v2.sh with dependency afterok:$dep_string" >> "$log_file"
 
     session_submit=$(sbatch \
         --dependency=afterok:$dep_string \
@@ -763,7 +763,7 @@ if ((${#dep_ids[@]} > 0)); then
         --export=BIOProjectID="$BIOProjectID",PRJdir="$PRJdir",baseDir="$baseDir",Logdir="$Logdir" \
         --output="$session_log_dir/JBrowseSession-%j.out" \
         --error="$session_log_dir/JBrowseSession-%j.err" \
-      JBrowseSession_v1.sh 2>&1)
+      JBrowseSession_v2.sh 2>&1)
 
     session_job_id=$(echo "$session_submit" | grep -oP 'Submitted batch job \K\d+')
 
@@ -771,7 +771,7 @@ if ((${#dep_ids[@]} > 0)); then
         echo "ERROR: Invalid JBrowseSession job ID: '$session_job_id'" >> "$log_file"
         echo "WARNING: JBrowse session will not be created" >> "$log_file"
     else
-        echo "JBrowseSession_v1.sh submitted with job ID: $session_job_id" >> "$log_file"
+        echo "JBrowseSession_v2.sh submitted with job ID: $session_job_id" >> "$log_file"
         echo "JBrowse session JSON will be written to: ${baseDir}/${BIOProjectID}_jbrowse_session.json" >> "$log_file"
 
         # Wait for JBrowse session

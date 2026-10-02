@@ -34,6 +34,7 @@ fi
 
 uniqueAccList="$1"
 BIOProjectID="$2"
+scratch_dir="${SCRATCH_BASE}/${BIOProjectID}"   # per-project scratch folder
 
 # Match your workflow paths
 baseDir="${myDir}/data/expression/GEO/${BIOProjectID}"

@@ -3,7 +3,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem-per-cpu=4gb
-#SBATCH --time=10:00:00
+#SBATCH --time=24:00:00
 #SBATCH --account=YOUR_SLURM_ACCOUNT       # <-- replace with your SLURM account
 #SBATCH --partition=normal
 #SBATCH --mail-type=FAIL
@@ -13,16 +13,19 @@
 # ---------------------------------------------
 # Script: RSEM_noBW.bash
 # Purpose: Estimate expression using RSEM after STAR alignment.
-#          BigWig generation is handled separately by STAR_bigwig2.sh.
+#          BigWig generation is handled separately by STAR_bigwig3.sh.
 #
 # Change log:
 #   17 Feb 2026 WMD — BigWig generation moved to STAR_bigwig2.sh
-#   [current]   WMD — Removed --sort-bam-by-coordinate; the coordinate-sorted
+#   29 Apr 2026 WMD — Removed --sort-bam-by-coordinate; the coordinate-sorted
 #                     BAM produced by that flag is not used by any downstream
 #                     step. Sorting is already performed on the STAR genome BAM
 #                     in STAR_bigwig2.sh. Removing this flag eliminates a
 #                     samtools sort pass that was unnecessary and slow for
 #                     high-read-count samples.
+#   Sep 2026    WMD — Added --no-bam-output: RSEM no longer writes its own
+#                     transcript BAM, which no downstream step uses. Wall
+#                     time raised to 24 h for high-read-count samples.
 # ---------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -100,13 +103,14 @@ echo ""
 
 # Run RSEM
 # Note: --sort-bam-by-coordinate is intentionally omitted. The coordinate-sorted
-# genome BAM used for BigWig generation is produced by STAR_bigwig2.sh. RSEM's
-# own sort output is not consumed by any downstream step in this pipeline.
+# genome BAM used for BigWig generation is produced by STAR_bigwig3.sh.
+# --no-bam-output: RSEM's own BAM output is not consumed by any downstream step.
 echo "Estimating expression for sample: $geo_accession JOB START $(date "+%Y-%m-%d %H:%M:%S")"
 echo "Running RSEM on $inbam with reference $rsemref"
 
 rsem-calculate-expression \
     --paired-end \
+    --no-bam-output \
     --alignments -p 8 "$inbam" "$rsemref" "$tempOPdir/$geo_accession"
 
 if [ $? -ne 0 ]; then

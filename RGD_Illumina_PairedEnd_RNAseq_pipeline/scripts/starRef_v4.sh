@@ -37,6 +37,7 @@ geo_accession=${geo_accession}
 PRJdir=${PRJdir}
 LENGTH=${length}
 BIOProjectID=${BIOProjectID}
+scratch_dir="${SCRATCH_BASE}/${BIOProjectID}"   # per-project scratch folder
 unique_name="${unique_name}"
 FinalOPdir=${Logdir}
 echo "Logdir is set to: $Logdir"
