@@ -9,6 +9,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.1] — 2026-10-05
+
+### Changed
+- `ConflictedSampleReport_v8.sh` — the conflict report columns `Strand` and `LibraryPrep` are renamed
+  `ComputedStrand` and `ComputedLibraryPrep`, matching `ComputedSex`. The study summary
+  (`<BIOProjectID>_library_prep_summary.txt`) now reads the `ComputedLibraryPrep` column; its format is unchanged.
+  Reports written by 2.1.0 keep the old column names until the script is re-run for that project.
+- `BWjson_v7.sh` — each BigWig track's metadata (shown in JBrowse) now includes two fields after "Computed Sex",
+  read from the sample's `<GSM>_library_prep.log`:
+  - **Computed Strandedness:** Stranded (forward), Stranded (reverse) or Unstranded.
+  - **Computed RNA Selection:** Poly(A) selection, rRNA depletion, or "Ambiguous (sample data doesn't
+    definitively fit either group)".
+  - Either field is "Unknown (sample data couldn't be measured)" when the log is missing, as for samples processed
+    before 2.1.0. RNA Selection is also Unknown below 500,000 gene-assigned reads.
+  - Track colors in the JBrowse session are unchanged.
+
+---
+
 ## [2.1.0] — 2026-10-02
 
 Library strandedness and library preparation (poly(A) selection vs rRNA depletion) are now inferred from the

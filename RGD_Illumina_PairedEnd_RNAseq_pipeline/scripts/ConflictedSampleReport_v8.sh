@@ -89,7 +89,7 @@ note="Note: Female samples should have a high TPM for Xist and males high TPM fo
     echo "$note"
 #    echo -e "SampleID\tInputSex\tComputedSex\tXYRatio\tAgreement\t${genes[*]}"
 #v7: calibration metric columns appended after LibraryPrep
-    echo -e "SampleID\tInputSex\tComputedSex\tXYRatio\tAgreement\t$(printf "%s\t" "${genes[@]}" | sed 's/\t$//')\tStrand\tLibraryPrep\tPctMRNA\tPctIntronic\tPctIntergenic\tPctRibosomal\tUniqPct\tMultiPct\tTooShortPct\tNonPolyA_perM\tLibraryPrepRule\tLibraryPrepQC\tLibraryPrepReason"
+    echo -e "SampleID\tInputSex\tComputedSex\tXYRatio\tAgreement\t$(printf "%s\t" "${genes[@]}" | sed 's/\t$//')\tComputedStrand\tComputedLibraryPrep\tPctMRNA\tPctIntronic\tPctIntergenic\tPctRibosomal\tUniqPct\tMultiPct\tTooShortPct\tNonPolyA_perM\tLibraryPrepRule\tLibraryPrepQC\tLibraryPrepReason"
 
 } > "${PRJdir}/$output_file"
 
@@ -198,15 +198,15 @@ while IFS=$'\t' read -r sample input_sex computed_sex xy_ratio agreement; do
 
         # v6: strand and library prep from the per-sample report written by STAR_bigwig2.sh
         prep_log=${PRJdir}/reads_fastq/${sample}/log_files/STAR/${sample}_library_prep.log
-        strand=""
-        library_prep=""
+        computed_strand=""
+        computed_library_prep=""
         # v7: Picard percentages from the same report
         pct_mrna=""; pct_intronic=""; pct_intergenic=""; pct_ribosomal=""
         # v8: call provenance and NonPolyA_perM from the same report (written by libprep_call.sh)
         prep_rule=""; prep_qc=""; prep_reason=""; nonpolyA_perM=""
         if [ -f "$prep_log" ]; then
-            strand=$(awk -F': *' '$1 == "Strand used" {print $2}' "$prep_log")
-            library_prep=$(awk -F': *' '$1 == "LIBRARY_PREP" {print $2}' "$prep_log")
+            computed_strand=$(awk -F': *' '$1 == "Strand used" {print $2}' "$prep_log")
+            computed_library_prep=$(awk -F': *' '$1 == "LIBRARY_PREP" {print $2}' "$prep_log")
             prep_rule=$(awk -F': *' '$1 == "Rule version" {print $2}' "$prep_log")
             prep_qc=$(awk -F': *' '$1 == "QC_FLAG" {print $2}' "$prep_log")
             prep_reason=$(awk '/^LIBRARY_PREP_REASON:/ {sub(/^LIBRARY_PREP_REASON: */, ""); print}' "$prep_log")
@@ -223,10 +223,10 @@ while IFS=$'\t' read -r sample input_sex computed_sex xy_ratio agreement; do
                 $1 == "PCT_RIBOSOMAL_BASES"  {r = $2}
                 END {print (m == "" ? "NA" : m), (i == "" ? "NA" : i), (g == "" ? "NA" : g), (r == "" ? "NA" : r)}' "$prep_log")"
         else
-            echo "  WARNING $sample: no library prep report at $prep_log -> Strand/LibraryPrep = NA"
+            echo "  WARNING $sample: no library prep report at $prep_log -> ComputedStrand/ComputedLibraryPrep = NA"
         fi
-        strand=${strand:-NA}
-        library_prep=${library_prep:-NA}
+        computed_strand=${computed_strand:-NA}
+        computed_library_prep=${computed_library_prep:-NA}
         pct_mrna=${pct_mrna:-NA}; pct_intronic=${pct_intronic:-NA}
         pct_intergenic=${pct_intergenic:-NA}; pct_ribosomal=${pct_ribosomal:-NA}
         prep_rule=${prep_rule:-NA}; prep_qc=${prep_qc:-NA}; prep_reason=${prep_reason:-NA}
@@ -251,7 +251,7 @@ while IFS=$'\t' read -r sample input_sex computed_sex xy_ratio agreement; do
 #Updated 23 April 2026 tab delimited
 #v6: Strand and LibraryPrep appended as the last two columns
 #v7: calibration metrics appended after LibraryPrep
-        echo -e "$sample\t$input_sex\t$computed_sex\t$xy_ratio\t$agreement\t$(printf "%s\t" "${tpm_values[@]}" | sed 's/\t$//')\t$strand\t$library_prep\t$pct_mrna\t$pct_intronic\t$pct_intergenic\t$pct_ribosomal\t$uniq_pct\t$multi_pct\t$short_pct\t$nonpolyA_perM\t$prep_rule\t$prep_qc\t$prep_reason" >> "${PRJdir}/$output_file"
+        echo -e "$sample\t$input_sex\t$computed_sex\t$xy_ratio\t$agreement\t$(printf "%s\t" "${tpm_values[@]}" | sed 's/\t$//')\t$computed_strand\t$computed_library_prep\t$pct_mrna\t$pct_intronic\t$pct_intergenic\t$pct_ribosomal\t$uniq_pct\t$multi_pct\t$short_pct\t$nonpolyA_perM\t$prep_rule\t$prep_qc\t$prep_reason" >> "${PRJdir}/$output_file"
     fi
 
     # v5: every row is written here, matched or not, so BWjson can still find it
@@ -273,7 +273,7 @@ NR == 1 { next }                                   # note line
 NR == 2 { for (i = 1; i <= NF; i++) col[$i] = i; next }
 {
     n_samples++
-    calls[$col["LibraryPrep"]]++
+    calls[$col["ComputedLibraryPrep"]]++
     rules[$col["LibraryPrepRule"]]++
     split("PctMRNA PctIntronic PctIntergenic PctRibosomal UniqPct MultiPct TooShortPct NonPolyA_perM", keys, " ")
     for (k = 1; k <= 8; k++) {
