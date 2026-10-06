@@ -9,6 +9,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.2] — 2026-10-06
+
+### Changed
+- `ConflictedSampleReport_v8.sh` — conflict report note (line 1) reworded: "Sry is reported but excluded from
+  the calculation." replaces "Sry is reported but excluded from the call (uninformative on GRCr8)."
+  No other change.
+
+---
+
 ## [2.1.1] — 2026-10-05
 
 ### Changed

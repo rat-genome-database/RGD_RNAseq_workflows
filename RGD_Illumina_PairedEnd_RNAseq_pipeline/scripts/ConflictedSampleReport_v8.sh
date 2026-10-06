@@ -84,7 +84,7 @@ if [ ! -f "$sex_result_backup" ]; then
 fi
 
 # Add header and note to the output file
-note="Note: Female samples should have a high TPM for Xist and males high TPM for Uty, Ddx3y, Kdm5d, and Eif2s3y. Sry is reported but excluded from the call (uninformative on GRCr8)."
+note="Note: Female samples should have a high TPM for Xist and males high TPM for Uty, Ddx3y, Kdm5d, and Eif2s3y. Sry is reported but excluded from the calculation."
 {
     echo "$note"
 #    echo -e "SampleID\tInputSex\tComputedSex\tXYRatio\tAgreement\t${genes[*]}"
