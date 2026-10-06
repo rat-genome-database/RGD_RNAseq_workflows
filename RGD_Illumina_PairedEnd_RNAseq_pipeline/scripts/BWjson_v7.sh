@@ -175,7 +175,7 @@ cat > "$json_file" <<EOF
     "Project Accession ID": "${BIOProjectID_esc}",
     "Sample Accession ID": "${Sample_esc}",
     "PubMed ID": "PMID:${PMID_esc}",
-    "Data Processing": "HPC RGD workflow",
+    "Data Processing": "HPC RGD paired-end workflow 2.1.2",
     "Read alignment": "STAR v2.7.10b",
     "Genome version": "GCF_036323735.1 GRCr8",
     "Expression Quantification": "RSEM v1.3.1"
