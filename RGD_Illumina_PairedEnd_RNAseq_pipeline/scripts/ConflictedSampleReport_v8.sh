@@ -59,10 +59,13 @@ tpm_matrix_file=${PRJdir}/${BIOProjectID}.genes.TPM.matrix
 
 libprep_summary=${PRJdir}/${BIOProjectID}_library_prep_summary.txt
 
+# Pipeline version, written at the start of line 1, before the note (update with each release)
+WORKFLOW_VERSION="HPC RGD paired-end workflow 2.1.2"
+
 # v5 call thresholds
 FEMALE_R=10     # R >= this -> F
 MALE_R=1        # R <= this -> M
-MIN_SIGNAL=1    # max(Xist,Ymed) below this TPM -> no gene call, keep X:Y
+MIN_SIGNAL=1    # max(Xist,Ymed) below this TPM -> no gene call, Undetermined
 
 # v5: fail if an input is missing.
 if [ ! -f "$sex_result_file" ]; then
@@ -84,7 +87,7 @@ if [ ! -f "$sex_result_backup" ]; then
 fi
 
 # Add header and note to the output file
-note="Note: Female samples should have a high TPM for Xist and males high TPM for Uty, Ddx3y, Kdm5d, and Eif2s3y. Sry is reported but excluded from the calculation."
+note="Workflow: ${WORKFLOW_VERSION}. Note: ComputedSex is called from sex-gene expression: R = (Xist TPM + 1) / (median TPM of Uty, Ddx3y, Kdm5d and Eif2s3y + 1); R >= ${FEMALE_R} is called F, R <= ${MALE_R} is called M, and other values, or samples where Xist and the Y-gene median are both below ${MIN_SIGNAL} TPM, are Undetermined. Females express Xist and males the Y-linked genes. Sry is reported but not used in the calculation. XYRatio (X:Y read coverage) is shown for reference only. Agreement compares ComputedSex with InputSex (submitted to GEO)."
 {
     echo "$note"
 #    echo -e "SampleID\tInputSex\tComputedSex\tXYRatio\tAgreement\t${genes[*]}"

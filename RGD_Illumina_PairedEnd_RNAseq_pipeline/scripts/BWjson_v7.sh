@@ -87,7 +87,7 @@ get_calc_sex() {
 CalcSex="$(get_calc_sex "$geo_accession" 2>/dev/null || echo "Unknown")"
 
 ###############################################################################
-# COMPUTED STRANDEDNESS AND RNA SELECTION (from the libprep_call.sh report)
+# COMPUTED STRANDEDNESS AND LIBRARY CAPTURE (from the libprep_call.sh report)
 ###############################################################################
 prep_log="${PRJdir}/${geo_accession}/log_files/STAR/${geo_accession}_library_prep.log"
 
@@ -168,7 +168,7 @@ cat > "$json_file" <<EOF
     "Sex": "${Sex_esc}",
     "Computed Sex": "${CalcSex_esc}",
     "Computed Strandedness": "${CalcStrand_esc}",
-    "Computed RNA Selection": "${CalcPrep_esc}",
+    "Computed Library Capture": "${CalcPrep_esc}",
     "RGD Metadata Report": "https://rgd.mcw.edu/rgdweb/report/expressionStudy/main.html?geoAcc=${BIOProjectID_esc}",
     "Project Title": "${Title_esc}",
     "Project Repository Link": "${GEOpath_esc}",
