@@ -203,6 +203,7 @@ echo ""
 echo "============================================"
 echo "Step 4: Running FastQC..."
 echo "============================================"
+export _JAVA_OPTIONS="-Xmx2g"
 fastqc "$new_fastq" --outdir "$scratch_dir/${Run}/" || {
     echo "ERROR: FastQC failed"
     exit 1

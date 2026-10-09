@@ -27,7 +27,8 @@ set -uo pipefail
 
 LIB="${SCRIPT_DIR}/lib_v10.sh"
 STEP1_SCRIPT="${SCRIPT_DIR}/run_SRA2QC_SE_v1.bash"
-STEP2_SCRIPT="${SCRIPT_DIR}/run_RNApipeline_SE_diskGuard_v1.bash"
+#STEP2_SCRIPT="${SCRIPT_DIR}/run_RNApipeline_SE_diskGuard_v1.bash"
+STEP2_SCRIPT="${SCRIPT_DIR}/run_RNApipeline_SE_diskGuard_v2.bash"
 
 
 MAX_CONCURRENT_SMALL="${MAX_CONCURRENT_SMALL:-4}"

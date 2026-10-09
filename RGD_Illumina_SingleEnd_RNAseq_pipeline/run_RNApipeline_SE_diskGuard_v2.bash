@@ -229,8 +229,8 @@ mapfile -t geo_accessions < "$temp_file"
 
 echo "Found ${#geo_accessions[@]} unique samples (GSM accessions)"
 
-if [ ! -x STAR_SE_v1.sh ]; then
-    echo "ERROR: STAR_SE_v1.sh not found or not executable."
+if [ ! -x STAR_SE_v2.sh ]; then
+    echo "ERROR: STAR_SE_v2.sh not found or not executable."
     exit 1
 fi
 
@@ -262,13 +262,13 @@ IFS=$'\t' read -r Tissue Strain Sex <<< "$(awk -v sample="$geo_accession" -F'\t'
                 --output="$sample_log_dir/STAR-%j.out" \
                 --error="$sample_log_dir/STAR-%j.err" \
                 --dependency=afterok:${starRef_job_id} \
-                STAR_SE_v1.sh "$geo_accession" "$READ1_FILES" "$BIOProjectID" "$unique_name")
+                STAR_SE_v2.sh "$geo_accession" "$READ1_FILES" "$BIOProjectID" "$unique_name")
         else
             sbatch_output=$(sbatch --job-name="STAR_SE_$geo_accession" \
                 --export=baseDir="$baseDir",PRJdir="$PRJdir",Logdir="$Logdir" \
                 --output="$sample_log_dir/STAR-%j.out" \
                 --error="$sample_log_dir/STAR-%j.err" \
-                STAR_SE_v1.sh "$geo_accession" "$READ1_FILES" "$BIOProjectID" "$unique_name")
+                STAR_SE_v2.sh "$geo_accession" "$READ1_FILES" "$BIOProjectID" "$unique_name")
         fi
 
         job_id=$(echo "$sbatch_output" | awk '{print $4}')
@@ -491,7 +491,7 @@ matrix_output=$(sbatch \
     --export=BIOProjectID="$BIOProjectID",PRJdir="$PRJdir",Logdir="$Logdir",baseDir="$baseDir",scratch_dir="$scratch_dir" \
     --output="$matrix_log_dir/RSEMmatrix-%j.out" \
     --error="$matrix_log_dir/RSEMmatrix-%j.err" \
-    RSEMmatrix_v6.sh "$passAccList" "$BIOProjectID" 2>&1)
+    RSEMmatrix_v7.sh "$passAccList" "$BIOProjectID" 2>&1)
 
 matrix_job_id=$(echo "$matrix_output" | grep -oP 'Submitted batch job \K\d+')
 if [[ -z "$matrix_job_id" || ! "$matrix_job_id" =~ ^[0-9]+$ ]]; then
@@ -613,7 +613,7 @@ if ((${#dep_ids[@]} > 0)); then
         --export=BIOProjectID="$BIOProjectID",PRJdir="$PRJdir",baseDir="$baseDir",Logdir="$Logdir" \
         --output="$session_log_dir/JBrowseSession-%j.out" \
         --error="$session_log_dir/JBrowseSession-%j.err" \
-        JBrowseSession_v1.sh 2>&1)
+        JBrowseSession_v2.sh 2>&1)
 
     session_job_id=$(echo "$session_submit" | grep -oP 'Submitted batch job \K\d+')
     if [[ -z "$session_job_id" || ! "$session_job_id" =~ ^[0-9]+$ ]]; then

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -8,11 +9,21 @@ from datetime import datetime
 Build a JBrowse2 session JSON for one BIOProject.
 
 Usage:
-  python make_jbrowse_session_for_bioproject.py BIOProjectID PRJdir baseDir
+  python make_jbrowse_session_for_bioproject.py BIOProjectID PRJdir baseDir [passAccList]
 
 What it does:
   - Finds per-sample RNAseq track JSON files under PRJdir (RNAseq_*.json),
     excluding *geneTPMbed.json and *TXTPMbed.json
+  - Includes ONLY samples that passed STARQC. The set of PASS samples is read
+    from the PASS accession list that the orchestrator builds and drives RSEM /
+    ComputeSex / BWjson from (single source of truth):
+        <baseDir>/log_files/STARQC/<BIOProjectID>_Unique_AccList_PASS.txt
+    (override by passing the PASS AccList path as the optional 4th argument).
+    geo_accession is read from column 2 (header row skipped). A track is kept
+    only if its sample (metadata["Sample Accession ID"], or the geo_accession
+    parsed from the trackId) is in that list.
+    If the PASS AccList cannot be found the script aborts rather than silently
+    including failed samples; set ALLOW_MISSING_QC=1 to fall back to no filtering.
   - Forces BigWig URLs to the public RGD location:
 #     6 March 2026 change location to https://download.rgd.mcw.edu/expression/<BIOProjectID>/ExpressionProfileBigWig/<trackId>.bigwig
       https://download.rgd.mcw.edu/expression/<BIOProjectID>/Genome-wide_read_coverage_BigWig_files/<trackId>.bigwig
@@ -46,9 +57,52 @@ def normalize_str(x) -> str:
     return str(x).strip()
 
 
+def load_pass_samples(pass_acc_list: Path):
+    """Return the set of PASS sample IDs from the PASS accession list.
+
+    This is the same PASS-only, deduplicated list the orchestrator builds from
+    the STARQC report and uses to drive RSEM / ComputeSex / BWjson:
+        <baseDir>/log_files/STARQC/<BIOProjectID>_Unique_AccList_PASS.txt
+    It is tab-separated with a header row; geo_accession is in column 2:
+        Run  geo_accession  Tissue  Strain  Sex  PMID  GEOpath  Title  ...
+    Returns None if the list cannot be read.
+    """
+    if not pass_acc_list.is_file():
+        return None
+
+    pass_ids = set()
+    with pass_acc_list.open() as fh:
+        header = fh.readline()  # skip header row
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line.strip():
+                continue
+            cols = line.split("\t")
+            if len(cols) < 2:
+                continue
+            geo_accession = cols[1].strip()
+            if geo_accession:
+                pass_ids.add(geo_accession)
+    return pass_ids
+
+
+def sample_id_for_track(track, track_id) -> str:
+    """Best-effort sample (geo_accession) for a track.
+
+    Prefer metadata["Sample Accession ID"] (set by BWjson_v7.sh); fall back to
+    the last underscore-delimited token of the trackId, which is built as
+    RNAseq_<Tissue>_<Strain>_<Sex>_<geo_accession>.
+    """
+    metadata = track.get("metadata", {}) or {}
+    sid = normalize_str(metadata.get("Sample Accession ID", ""))
+    if sid:
+        return sid
+    return track_id.split("_")[-1] if track_id else ""
+
+
 def main():
-    if len(sys.argv) != 4:
-        print("Usage: make_jbrowse_session_for_bioproject.py BIOProjectID PRJdir baseDir", file=sys.stderr)
+    if len(sys.argv) not in (4, 5):
+        print("Usage: make_jbrowse_session_for_bioproject.py BIOProjectID PRJdir baseDir [passAccList]", file=sys.stderr)
         sys.exit(1)
 
     BIOProjectID = sys.argv[1]
@@ -58,6 +112,35 @@ def main():
     if not PRJdir.is_dir():
         print(f"Error: PRJdir does not exist or is not a directory: {PRJdir}", file=sys.stderr)
         sys.exit(1)
+
+    # ---- Resolve PASS accession list and the set of PASS samples ----
+    # Default location matches the orchestrator: Logdir=<baseDir>/log_files
+    if len(sys.argv) == 5:
+        pass_acc_list = Path(sys.argv[4])
+    else:
+        pass_acc_list = baseDir / "log_files" / "STARQC" / f"{BIOProjectID}_Unique_AccList_PASS.txt"
+
+    pass_samples = load_pass_samples(pass_acc_list)
+
+    allow_missing_qc = os.environ.get("ALLOW_MISSING_QC", "") == "1"
+    if pass_samples is None:
+        if allow_missing_qc:
+            print(
+                f"WARNING: PASS AccList not found ({pass_acc_list}); "
+                "ALLOW_MISSING_QC=1 set, proceeding WITHOUT QC filtering.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"Error: PASS AccList not found: {pass_acc_list}\n"
+                "Refusing to build a session that may include QC-failed samples.\n"
+                "Pass the PASS AccList path as the 4th argument, or set "
+                "ALLOW_MISSING_QC=1 to bypass QC filtering.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        print(f"Loaded {len(pass_samples)} PASS sample(s) from {pass_acc_list}", file=sys.stderr)
 
     # Find only RNAseq_*.json, excluding helper JSONs
     track_files = []
@@ -107,6 +190,17 @@ def main():
         if not track_id:
             print(f"Warning: track JSON {p} has no 'trackId'; skipping", file=sys.stderr)
             continue
+
+        # ---- QC gate: skip any sample that did not PASS STARQC ----
+        if pass_samples is not None:
+            sid = sample_id_for_track(track, track_id)
+            if sid not in pass_samples:
+                print(
+                    f"Skipping QC-failed/unknown sample: trackId={track_id} "
+                    f"sample={sid or '?'} ({p})",
+                    file=sys.stderr,
+                )
+                continue
 
         metadata = track.get("metadata", {})
 

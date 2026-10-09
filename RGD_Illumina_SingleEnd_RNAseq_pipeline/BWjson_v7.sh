@@ -18,6 +18,9 @@ set -euo pipefail
 # Enable debugging only if DEBUG=1
 [ "${DEBUG:-0}" = "1" ] && set -x
 
+# Pipeline version, shown as "Data Processing" in the track metadata (update with each release)
+WORKFLOW_VERSION="HPC RGD single-end workflow 2.1.0"
+
 ###############################################################################
 # REQUIRED ENVIRONMENT VARIABLES (from wrapper / pipeline)
 ###############################################################################
@@ -87,6 +90,35 @@ get_calc_sex() {
 CalcSex="$(get_calc_sex "$geo_accession" 2>/dev/null || echo "Unknown")"
 
 ###############################################################################
+# COMPUTED STRANDEDNESS AND LIBRARY CAPTURE (from the libprep_call.sh report)
+###############################################################################
+prep_log="${PRJdir}/${geo_accession}/log_files/STAR/${geo_accession}_library_prep.log"
+
+get_prep_field() {
+    awk -F': *' -v k="$1" '
+        $1 == k { print $2; found=1 }
+        END { if (!found) exit 1 }
+    ' "$prep_log"
+}
+
+CalcStrand_raw="$(get_prep_field "Strand used" 2>/dev/null || echo "")"
+CalcPrep_raw="$(get_prep_field "LIBRARY_PREP" 2>/dev/null || echo "")"
+
+case "$CalcStrand_raw" in
+    FIRST_READ_TRANSCRIPTION_STRAND)  CalcStrand="Stranded (forward)" ;;
+    SECOND_READ_TRANSCRIPTION_STRAND) CalcStrand="Stranded (reverse)" ;;
+    NONE)                             CalcStrand="Unstranded" ;;
+    *)                                CalcStrand="Unknown (sample data couldn't be measured)" ;;
+esac
+
+case "$CalcPrep_raw" in
+    POLYA)         CalcPrep="Poly(A) selection" ;;
+    RRNA_DEPLETED) CalcPrep="rRNA depletion" ;;
+    AMBIGUOUS)     CalcPrep="Ambiguous (sample data doesn't definitively fit either group)" ;;
+    *)             CalcPrep="Unknown (sample data couldn't be measured)" ;;
+esac
+
+###############################################################################
 # ESCAPE ALL METADATA FOR JSON
 ###############################################################################
 Title_esc=$(json_escape "$title")
@@ -94,6 +126,8 @@ Tissue_esc=$(json_escape "$tissue")
 Strain_esc=$(json_escape "$strain")
 Sex_esc=$(json_escape "$sex")
 CalcSex_esc=$(json_escape "$CalcSex")
+CalcStrand_esc=$(json_escape "$CalcStrand")
+CalcPrep_esc=$(json_escape "$CalcPrep")
 Sample_characteristics_esc=$(json_escape "$Sample_characteristics")
 StrainInfo_esc=$(json_escape "$StrainInfo")
 PMID_esc=$(json_escape "$PMID")
@@ -136,13 +170,15 @@ cat > "$json_file" <<EOF
     "RGD Strain Report": "${StrainInfo_esc}",
     "Sex": "${Sex_esc}",
     "Computed Sex": "${CalcSex_esc}",
+    "Computed Strandedness": "${CalcStrand_esc}",
+    "Computed Library Capture": "${CalcPrep_esc}",
     "RGD Metadata Report": "https://rgd.mcw.edu/rgdweb/report/expressionStudy/main.html?geoAcc=${BIOProjectID_esc}",
     "Project Title": "${Title_esc}",
     "Project Repository Link": "${GEOpath_esc}",
     "Project Accession ID": "${BIOProjectID_esc}",
     "Sample Accession ID": "${Sample_esc}",
     "PubMed ID": "PMID:${PMID_esc}",
-    "Data Processing": "HPC RGD workflow",
+    "Data Processing": "${WORKFLOW_VERSION}",
     "Read alignment": "STAR v2.7.10b",
     "Genome version": "GCF_036323735.1 GRCr8",
     "Expression Quantification": "RSEM v1.3.1"

@@ -23,7 +23,7 @@ SCRIPT_DIR="/path/to/RGD_Illumina_SingleEnd_RNAseq_pipeline"
 # 18 June 2025 removed #SBATCH --error=RSEMmtx.err, #SBATCH --output=%x-%j.out
 # Updated 7 April 2026 (v6): call ConflictedSampleReport_v5.sh and explicitly
 #                            pass baseDir/PRJdir into that script
-
+#Updated 31 August 2026 ConflictedSampleReport_v6.sh programmatically considers gene ratios and will override x:y ratio to infer sex
 set -x
 set -euo pipefail
 
@@ -138,7 +138,10 @@ python3 -m multiqc "$scratch_dir" -o "${baseDir}" -n ${BIOProjectID}_final_multi
 ##################################
 # Run Sample Sex Conflict Script #
 ##################################
-baseDir="$baseDir" PRJdir="$PRJdir" bash "${SCRIPT_DIR}/ConflictedSampleReport_v5.sh" "${BIOProjectID}"
+#baseDir="$baseDir" PRJdir="$PRJdir" bash "${SCRIPT_DIR}/ConflictedSampleReport_v5.sh" "${BIOProjectID}" consider sex gene ratio to infer sex 
+#baseDir="$baseDir" PRJdir="$PRJdir" bash "${SCRIPT_DIR}/ConflictedSampleReport_v6.sh" "${BIOProjectID}"
+#v7 (6 Oct 2026): ConflictedSampleReport_v7.sh adds strand, library prep and the study summary
+baseDir="$baseDir" PRJdir="$PRJdir" bash "${SCRIPT_DIR}/ConflictedSampleReport_v7.sh" "${BIOProjectID}"
 
 ###########################################
 # Capture end time and print elapsed time #
