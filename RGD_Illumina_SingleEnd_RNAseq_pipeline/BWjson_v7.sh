@@ -181,7 +181,7 @@ cat > "$json_file" <<EOF
     "Data Processing": "${WORKFLOW_VERSION}",
     "Read alignment": "STAR v2.7.10b",
     "Genome version": "GCF_036323735.1 GRCr8",
-    "Expression Quantification": "RSEM v1.3.1"
+    "Expression Quantification": "RSEM v1.3.3"
   },
   "adapter": {
     "type": "BigWigAdapter",
